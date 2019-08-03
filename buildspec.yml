@@ -1,0 +1,25 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - $(aws ecr get-login)
+  build:
+    commands:
+      - echo 'Building docker image'
+      - docker build -t dind_test .
+      - echo 'Running container'
+      - docker run dind_test /bin/echo Hello Dind
+  post_build:
+    commands:
+      - echo "Would deploy here"
+      - docker tag dind_test:latest $AWS_ACCOUNT_ID.dkr.ecr.$DNS_SUFFIX/dind_test:$(hostname)
+      - docker push $AWS_ACCOUNT_ID.dkr.ecr.$DNS_SUFFIX/dind_test:$(hostname)
+      - echo 'Removing previous tag'
+      - docker rmi $AWS_ACCOUNT_ID.dkr.ecr.$DNS_SUFFIX/dind_test:$(hostname)
+      - aws ecr batch-delete-image --repository-name dind_test --image-ids imageTag=$(hostname)
+
+artifacts:
+  type: zip
+  files:
+    - 'Dockerfile'
